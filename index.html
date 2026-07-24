@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>濃度計算ドリル</title>
+
+<!--
+==============================================================
+  使い方（配布前に読んでください）
+==============================================================
+  1. 問題の追加・修正は、ファイル下部の PROBLEMS 配列だけを編集します。
+     HTML / CSS には触れる必要がありません。
+       section  : その問題の前に見出しを入れたいときだけ書く
+       secLead  : 見出しの直後に出す前提条件（分子量など）
+       answer   : 正解の数値（入力が一致すれば正解）
+       dp       : 正解を表示するときの小数桁数（0 なら整数表示）
+
+  2. 公開方法（どれか1つ）
+     ・GitHub Pages : リポジトリに index.html として置き、
+       Settings → Pages → Branch: main / (root) を選ぶ
+     ・Cloudflare Pages / Netlify : このファイルをドラッグ&ドロップ
+     ・学内サーバや LMS に置く
+
+  3. 注意
+     ・正解の数値はソースに含まれます。ソースを見れば分かるので、
+       成績評価用の試験ではなく「自習・確認用」として配布してください。
+     ・回答は一切送信されません（採点はブラウザ内で完結）。
+==============================================================
+-->
+
+<style>
+:root{
+  --paper:#f5f8fa;
+  --card:#ffffff;
+  --ink:#132a3a;
+  --ink2:#4d6577;
+  --ink3:#7e93a1;
+  --rule:#cbd9e3;
+  --grid:#e4edf2;
+  --ok:#0b6b52;
+  --ok-bg:#eaf5f0;
+  --miss:#9c3b57;
+  --mark:#c08a1e;
+  --font-display:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"MS PMincho",serif;
+  --font-body:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;
+  --font-num:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;font-size:16px;line-height:1.8;
+  font-family:var(--font-body);color:var(--ink);
+  background-color:var(--paper);
+  background-image:
+    repeating-linear-gradient(0deg,transparent 0 23px,var(--grid) 23px 24px),
+    repeating-linear-gradient(90deg,transparent 0 23px,var(--grid) 23px 24px);
+}
+.wrap{max-width:44rem;margin:0 auto;padding:2.5rem 1.1rem 4rem}
+
+.eyebrow{font-size:.75rem;letter-spacing:.22em;color:var(--ink3);margin:0 0 .6rem}
+h1{
+  font-family:var(--font-display);font-weight:600;
+  font-size:clamp(1.9rem,6vw,2.6rem);letter-spacing:.06em;
+  margin:0 0 .5rem;line-height:1.35;
+}
+.lede{margin:0 0 1.4rem;color:var(--ink2);font-size:.95rem}
+.toolbar{
+  display:flex;flex-wrap:wrap;gap:.55rem;align-items:center;
+  padding:.85rem 0 1rem;border-top:1px solid var(--rule);border-bottom:2px solid var(--ink);
+}
+.score{
+  margin:0 0 0 auto;font-family:var(--font-num);font-size:.85rem;
+  font-variant-numeric:tabular-nums;color:var(--ink2);
+}
+button{
+  font:inherit;font-size:.85rem;cursor:pointer;
+  background:transparent;color:var(--ink);
+  border:1px solid var(--rule);border-radius:2px;
+  padding:.32rem .8rem;transition:background .15s,border-color .15s;
+}
+button:hover{background:#fff;border-color:var(--ink2)}
+button:focus-visible{outline:2px solid var(--mark);outline-offset:2px}
+
+/* --- section heading --- */
+.section{
+  display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;
+  font-family:var(--font-display);font-size:1.08rem;font-weight:600;letter-spacing:.08em;
+  margin:2.8rem 0 0;padding:0 0 .45rem;border-bottom:2px solid var(--ink);
+}
+.section .badge{
+  font-family:var(--font-num);font-size:.7rem;letter-spacing:.14em;font-weight:400;
+  border:1px solid var(--ink);padding:.1rem .45rem;
+}
+
+/* --- problem card --- */
+.q{background:var(--card);border:1px solid var(--rule);margin:1.2rem 0;padding:1.3rem 1.25rem 1.1rem}
+.qhead{display:flex;align-items:baseline;gap:.8rem;margin-bottom:.6rem}
+.qno{
+  font-family:var(--font-num);font-size:.72rem;letter-spacing:.14em;
+  color:#fff;background:var(--ink);padding:.15rem .5rem;white-space:nowrap;
+}
+.qhead h3{font-family:var(--font-display);font-size:1.05rem;font-weight:600;margin:0;letter-spacing:.04em}
+.qbody{margin:0 0 .9rem}
+.seclead{
+  margin:.8rem 0 0;padding:.55rem .85rem;font-size:.86rem;line-height:1.7;
+  background:#fffaf0;border-left:3px solid var(--mark);color:var(--ink2);
+}
+.seclead b{color:var(--ink);font-family:var(--font-num);font-weight:600}
+
+.field{margin:0 0 1rem}
+.field label{display:block;font-size:.88rem;font-weight:600;margin-bottom:.25rem}
+.inputrow{display:flex;align-items:center;gap:.45rem}
+input[type=text]{
+  font-family:var(--font-num);font-size:1.05rem;font-variant-numeric:tabular-nums;
+  width:9rem;padding:.35rem .55rem;color:var(--ink);
+  border:0;border-bottom:2px solid var(--ink);background:#fdfefe;text-align:right;
+}
+input[type=text]:focus{outline:none;border-bottom-color:var(--mark);background:#fffdf6}
+input[type=text]:focus-visible{outline:2px solid var(--mark);outline-offset:2px}
+.unit{font-size:.9rem;color:var(--ink2)}
+.hint{margin:.2rem 0 0;font-size:.78rem;color:var(--ink3)}
+.verdict{margin-top:.5rem;font-size:.88rem}
+.verdict .tag{font-weight:600}
+.verdict.is-ok .tag{color:var(--ok)}
+.verdict.is-miss .tag{color:var(--miss)}
+
+.sol{border-top:1px dashed var(--rule);margin-top:.4rem;padding-top:.9rem;font-size:.93rem}
+.sol h4{font-size:.8rem;letter-spacing:.14em;color:var(--ink3);margin:0 0 .5rem;font-weight:600}
+.sol p{margin:.35rem 0}
+.sol .calc{
+  font-family:var(--font-num);font-size:.88rem;font-variant-numeric:tabular-nums;
+  background:#f8fbfc;border-left:3px solid var(--mark);padding:.5rem .75rem;margin:.5rem 0;
+  overflow-x:auto;white-space:pre-wrap;
+}
+.sol .ans{font-weight:600}
+footer{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--rule);font-size:.8rem;color:var(--ink3)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media print{
+  body{background:#fff}
+  .toolbar,.showsol,.verdict{display:none}
+  .q{break-inside:avoid;border-color:#999}
+  .sol{display:block!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">実験・実習の基礎 ／ 自己採点シート</p>
+  <h1>濃度計算ドリル</h1>
+  <p class="lede">数値を入力すると、その場で正誤を判定します。答案は送信されません。電卓を使ってかまいません。</p>
+  <div class="toolbar">
+    <button id="revealAll" type="button">解説をすべて開く</button>
+    <button id="resetAll" type="button">入力をリセット</button>
+    <p class="score" id="score" aria-live="polite">正答 0 / 0</p>
+  </div>
+</header>
+
+<main id="quiz"></main>
+
+<footer>
+  <p>判定はブラウザ内で完結します。答えは指示された桁まで四捨五入して入力してください。</p>
+</footer>
+
+</div>
+
+<script>
+/* ==========================================================
+   問題データ ― ここだけ編集すれば問題を差し替えられます
+   ========================================================== */
+
+/* --- 解説で使い回す共通の書き出し --- */
+const LEAD1 = `<p>必要量 (g) ＝ モル濃度 (mol/L) × 溶液量 (L) × 分子量 (g/mol)</p>`;
+const LEAD2 = `<p>必要量 (g) ＝ 濃度 (%) ÷ 100 × 溶液量 (mL)</p>`;
+const LEAD3 = `<p>濃度 (%) ＝ 溶質量 (g) ÷ 溶液量 (mL) × 100</p>`;
+
+const PROBLEMS = [
+
+/* ===== A. モル濃度から試薬量を求める（NaOH 分子量 40） ===== */
+{
+  section:"モル濃度から試薬量を求める", badge:"A", secLead:"この節の計算では、<b>NaOH の分子量を 40</b> とする。mL は 1000 で割って L に直してから使う。",
+  title:"0.1 mol/L 水酸化ナトリウム溶液",
+  body:"0.1 mol/L の水酸化ナトリウム(NaOH)溶液を 500 mL 調製したい。必要な NaOH は何 g か答えよ。",
+  fields:[{label:"必要な NaOH",unit:"g",answer:2.0,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD1 + `<div class="calc">500 mL = 0.5 L
+0.1 × 0.5 × 40 = <span class="ans">2.0 g</span></div>`
+},
+{
+  title:"0.5 mol/L 水酸化ナトリウム溶液",
+  body:"0.5 mol/L の NaOH 溶液を 200 mL 調製したい。必要な NaOH は何 g か答えよ。",
+  fields:[{label:"必要な NaOH",unit:"g",answer:4.0,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD1 + `<div class="calc">200 mL = 0.2 L
+0.5 × 0.2 × 40 = <span class="ans">4.0 g</span></div>`
+},
+{
+  title:"0.2 mol/L 水酸化ナトリウム溶液",
+  body:"0.2 mol/L の NaOH 溶液を 300 mL 調製したい。必要な NaOH は何 g か答えよ。",
+  fields:[{label:"必要な NaOH",unit:"g",answer:2.4,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD1 + `<div class="calc">300 mL = 0.3 L
+0.2 × 0.3 × 40 = <span class="ans">2.4 g</span></div>`
+},
+{
+  title:"1.0 mol/L 水酸化ナトリウム溶液",
+  body:"1.0 mol/L の NaOH 溶液を 80 mL 調製したい。必要な NaOH は何 g か答えよ。",
+  fields:[{label:"必要な NaOH",unit:"g",answer:3.2,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD1 + `<div class="calc">80 mL = 0.08 L
+1.0 × 0.08 × 40 = <span class="ans">3.2 g</span></div>`
+},
+{
+  title:"0.02 mol/L 水酸化ナトリウム溶液",
+  body:"0.02 mol/L の NaOH 溶液を 250 mL 調製したい。必要な NaOH は何 g か答えよ。",
+  fields:[{label:"必要な NaOH",unit:"g",answer:0.2,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD1 + `<div class="calc">250 mL = 0.25 L
+0.02 × 0.25 × 40 = <span class="ans">0.2 g</span></div>`
+},
+
+/* ===== B. ％から必要な溶質量を求める ===== */
+{
+  section:"％から必要な溶質量を求める", badge:"B", secLead:"％は<b>質量体積パーセント</b>（溶液 100 mL 中の溶質 g 数）として計算する。",
+  title:"5 ％食塩水",
+  body:"5 ％の食塩水を 300 mL 作りたい。何 g の食塩が必要か答えよ。",
+  fields:[{label:"必要な食塩",unit:"g",answer:15,dp:0,hint:"整数で"}],
+  solution: LEAD2 + `<div class="calc">5 ÷ 100 × 300 = <span class="ans">15 g</span></div>`
+},
+{
+  title:"生理食塩水",
+  body:"0.9 ％の生理食塩水を 500 mL 作りたい。何 g の食塩が必要か答えよ。",
+  fields:[{label:"必要な食塩",unit:"g",answer:4.5,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD2 + `<div class="calc">0.9 ÷ 100 × 500 = <span class="ans">4.5 g</span></div>`
+},
+{
+  title:"2 ％食塩水",
+  body:"2 ％の食塩水を 150 mL 作りたい。何 g の食塩が必要か答えよ。",
+  fields:[{label:"必要な食塩",unit:"g",answer:3.0,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD2 + `<div class="calc">2 ÷ 100 × 150 = <span class="ans">3.0 g</span></div>`
+},
+{
+  title:"8 ％食塩水",
+  body:"8 ％の食塩水を 250 mL 作りたい。何 g の食塩が必要か答えよ。",
+  fields:[{label:"必要な食塩",unit:"g",answer:20,dp:0,hint:"整数で"}],
+  solution: LEAD2 + `<div class="calc">8 ÷ 100 × 250 = <span class="ans">20 g</span></div>`
+},
+{
+  title:"10 ％ブドウ糖液",
+  body:"10 ％のブドウ糖液を 350 mL 作りたい。何 g のブドウ糖が必要か答えよ。",
+  fields:[{label:"必要なブドウ糖",unit:"g",answer:35,dp:0,hint:"整数で"}],
+  solution: LEAD2 + `<div class="calc">10 ÷ 100 × 350 = <span class="ans">35 g</span></div>`
+},
+
+/* ===== C. 溶質量と体積から％を求める ===== */
+{
+  section:"溶質量と体積から％を求める", badge:"C", secLead:"％は<b>質量体積パーセント</b>（溶液 100 mL 中の溶質 g 数）として計算する。",
+  title:"400 mL 中に 12 g",
+  body:"400 mL 中に 12 g の食塩が溶けている。これは何 ％の食塩水か答えよ。",
+  fields:[{label:"濃度",unit:"%",answer:3.0,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD3 + `<div class="calc">12 ÷ 400 × 100 = <span class="ans">3.0 %</span></div>`
+},
+{
+  title:"250 mL 中に 5 g",
+  body:"250 mL 中に 5 g の食塩が溶けている。これは何 ％の食塩水か答えよ。",
+  fields:[{label:"濃度",unit:"%",answer:2.0,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD3 + `<div class="calc">5 ÷ 250 × 100 = <span class="ans">2.0 %</span></div>`
+},
+{
+  title:"500 mL 中に 4.5 g",
+  body:"500 mL 中に 4.5 g の食塩が溶けている。これは何 ％の食塩水か答えよ。",
+  fields:[{label:"濃度",unit:"%",answer:0.9,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD3 + `<div class="calc">4.5 ÷ 500 × 100 = <span class="ans">0.9 %</span></div>`
+},
+{
+  title:"150 mL 中に 9 g",
+  body:"150 mL 中に 9 g の食塩が溶けている。これは何 ％の食塩水か答えよ。",
+  fields:[{label:"濃度",unit:"%",answer:6.0,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD3 + `<div class="calc">9 ÷ 150 × 100 = <span class="ans">6.0 %</span></div>`
+},
+{
+  title:"800 mL 中に 20 g",
+  body:"800 mL 中に 20 g の食塩が溶けている。これは何 ％の食塩水か答えよ。",
+  fields:[{label:"濃度",unit:"%",answer:2.5,dp:1,hint:"小数第1位まで"}],
+  solution: LEAD3 + `<div class="calc">20 ÷ 800 × 100 = <span class="ans">2.5 %</span></div>`
+}
+
+];
+
+/* ---------- 描画 ---------- */
+const quiz = document.getElementById("quiz");
+const scoreEl = document.getElementById("score");
+let totalFields = 0;
+
+PROBLEMS.forEach((p, qi) => {
+  if (p.section) {
+    const h = document.createElement("h2");
+    h.className = "section";
+    h.innerHTML = `<span class="badge">${p.badge || ""}</span>${p.section}`;
+    quiz.appendChild(h);
+    if (p.secLead) {
+      const lead = document.createElement("p");
+      lead.className = "seclead";
+      lead.innerHTML = p.secLead;
+      quiz.appendChild(lead);
+    }
+  }
+
+  const art = document.createElement("article");
+  art.className = "q";
+
+  const fieldsHTML = p.fields.map((f, fi) => {
+    totalFields++;
+    const id = `f${qi}_${fi}`;
+    return `<div class="field">
+      <label for="${id}">${f.label}</label>
+      <div class="inputrow">
+        <input type="text" id="${id}" inputmode="decimal" autocomplete="off"
+               data-q="${qi}" data-f="${fi}" placeholder="—">
+        <span class="unit">${f.unit || ""}</span>
+      </div>
+      ${f.hint ? `<p class="hint">${f.hint}</p>` : ""}
+      <div class="verdict" id="v_${id}" aria-live="polite"></div>
+    </div>`;
+  }).join("");
+
+  art.innerHTML = `
+    <div class="qhead"><span class="qno">問 ${qi + 1}</span><h3>${p.title}</h3></div>
+    <p class="qbody">${p.body}</p>
+    ${fieldsHTML}
+    <button class="showsol" type="button" aria-expanded="false">解説を見る</button>
+    <div class="sol" hidden><h4>解 説</h4>${p.solution}</div>`;
+
+  const btn = art.querySelector(".showsol");
+  const sol = art.querySelector(".sol");
+  btn.addEventListener("click", () => toggleSol(btn, sol));
+  quiz.appendChild(art);
+});
+
+function toggleSol(btn, sol, force) {
+  const open = force !== undefined ? force : sol.hidden;
+  sol.hidden = !open;
+  btn.textContent = open ? "解説を閉じる" : "解説を見る";
+  btn.setAttribute("aria-expanded", String(open));
+}
+
+/* ---------- 入力の正規化（全角・カンマ・単位を許容） ---------- */
+function parseNum(raw) {
+  if (!raw) return NaN;
+  const half = raw.replace(/[０-９．－−―ー，]/g, ch => {
+    const map = {"．":".","，":",","－":"-","−":"-","―":"-","ー":"-"};
+    return map[ch] !== undefined ? map[ch] : String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+  });
+  const cleaned = half.replace(/[^0-9.\-]/g, "");
+  if (cleaned === "" || cleaned === "-" || cleaned === ".") return NaN;
+  return Number(cleaned);
+}
+
+/* ---------- 判定 ---------- */
+const state = {};
+function check(input) {
+  const qi = +input.dataset.q, fi = +input.dataset.f;
+  const f = PROBLEMS[qi].fields[fi];
+  const box = document.getElementById("v_" + input.id);
+  const val = parseNum(input.value.trim());
+
+  if (isNaN(val)) {
+    box.className = "verdict"; box.innerHTML = "";
+    delete state[input.id];
+  } else if (Math.abs(val - f.answer) <= (f.tol || 0) + 1e-9) {
+    box.className = "verdict is-ok";
+    box.innerHTML = `<span class="tag">正解</span>　${f.answer.toFixed(f.dp || 0)} ${f.unit || ""}`;
+    state[input.id] = true;
+  } else {
+    box.className = "verdict is-miss";
+    box.innerHTML = `<span class="tag">もう一度</span>　答えが${val > f.answer ? "大きすぎます" : "小さすぎます"}`;
+    state[input.id] = false;
+  }
+  updateScore();
+}
+
+function updateScore() {
+  const ok = Object.values(state).filter(Boolean).length;
+  scoreEl.textContent = `正答 ${ok} / ${totalFields}`;
+}
+
+document.querySelectorAll("#quiz input[type=text]").forEach(inp => {
+  inp.addEventListener("input", () => check(inp));
+  inp.addEventListener("keydown", e => { if (e.key === "Enter") check(inp); });
+});
+
+/* ---------- ツールバー ---------- */
+let allOpen = false;
+document.getElementById("revealAll").addEventListener("click", e => {
+  allOpen = !allOpen;
+  document.querySelectorAll(".q").forEach(q =>
+    toggleSol(q.querySelector(".showsol"), q.querySelector(".sol"), allOpen));
+  e.currentTarget.textContent = allOpen ? "解説をすべて閉じる" : "解説をすべて開く";
+});
+
+document.getElementById("resetAll").addEventListener("click", () => {
+  document.querySelectorAll("#quiz input[type=text]").forEach(i => {
+    i.value = "";
+    const box = document.getElementById("v_" + i.id);
+    box.className = "verdict"; box.innerHTML = "";
+  });
+  for (const k in state) delete state[k];
+  updateScore();
+});
+
+updateScore();
+</script>
+</body>
+</html>
