@@ -372,7 +372,7 @@ function check(input) {
     state[input.id] = true;
   } else {
     box.className = "verdict is-miss";
-    box.innerHTML = `<span class="tag">もう一度</span>　答えが${val > f.answer ? "大きすぎます" : "小さすぎます"}`;
+    box.innerHTML = `<span class="tag">不正解</span>`;
     state[input.id] = false;
   }
   updateScore();
